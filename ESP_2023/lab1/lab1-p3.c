@@ -12,6 +12,7 @@ MOTD: Most fish are ectothermic, allowing their body temperatures to vary as amb
 
 int main(){
 
+    printf("\nLab 1\tPart 3\n");
     printf("\nBy:\tnsw\n");
     printf("\nHello,\tWorld!\n");
     return 0;
