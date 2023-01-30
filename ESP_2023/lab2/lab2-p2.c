@@ -17,7 +17,7 @@ int main(){
 	printf("\nPlease enter a temperature in Fahrenheit between -29.9 and 250.9 > ");
 	scanf("%f", &fahr);
 
-    if(((fahr<250.9) && (fahr>-29.9))){
+    if(((fahr<=250.9) && (fahr>=-29.9))){
         
         celc = (fahr - 32.0) * 5.0/9.0;
 	

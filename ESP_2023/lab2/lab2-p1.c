@@ -20,7 +20,7 @@ int main(){
     printf("\nPlease insert the second integer between -2000 to 2000 > ");
     scanf("%i",&B);
 
-    if(((A<2000) && (A>-2000)) && ((B<2000) && (B>-2000))){
+    if(((A<=2000) && (A>=-2000)) && ((B<=2000) && (B>=-2000))){
         
         result = ((A+25)*2+B)+(A-(B+25));
 
