@@ -23,5 +23,9 @@ int main(void)
 
     }
 
+    /*The output values are the same as the previous task's
+    because the integer variable being used has the same value
+    as the output value that had previously been set directly
+    to port C.*/
 
 }

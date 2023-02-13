@@ -23,5 +23,8 @@ int main(void)
 
     }
 
+    /*When the input pin's state is changed, the corresponding
+    output pin will also change because the state of the output
+    pins is equal to the input pins*/
 
 }

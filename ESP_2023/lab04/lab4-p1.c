@@ -20,6 +20,9 @@ int main(void)
         PORTC = 0xA5;
 
     }
-
+    
+    /*The output value, 0xA5, corresponds to the desired
+    output of pins 21, 23, 26 & 28 being set to high whilst
+    all other pins on port C are set to low.*/
 
 }
