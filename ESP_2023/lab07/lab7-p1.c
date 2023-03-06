@@ -7,7 +7,7 @@
 Program: Lab 7 Part 1
 Author: nsw
 Date: 2023/03/06
-Github Location: https://github.com/nate-sw/ESP/ESP_2023/lab07
+Github Location: https://github.com/nate-sw/ESP/tree/main/ESP_2023/lab07
 MOTD: 
 */
 
@@ -41,7 +41,7 @@ int main(void)
             numcnt++;
         }
 
-		if(key==0x0A)
+		if(key==0x0D)
         {
             break;
         }
