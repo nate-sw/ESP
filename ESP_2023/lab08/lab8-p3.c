@@ -30,11 +30,11 @@ int main(void)
 
     do
     {
-        if(((PIND & 0x80) == 0x80) & (msb==-1))
+        if(((PIND & 0x40) == 0x40) & (msb==-1))
         {
             msb=5;
         }
-        else if(((PIND & 0x80) == 0x00) & (msb==-1))
+        else if(((PIND & 0x40) == 0x00) & (msb==-1))
         {
             msb=0;
         }
@@ -51,7 +51,7 @@ int main(void)
             case 5: PORTC = FIVE; break;
         }
 
-        if((PIND & 0x80) == 0x80)
+        if((PIND & 0x40) == 0x40)
             lsb=9;
 
         else
@@ -60,7 +60,7 @@ int main(void)
 
         do
         {
-            if((PIND & 0x40) == 0x40)  //Reset Displays
+            if((PIND & 0x80) == 0x80)  //Reset Displays
             {
                 lsb=-1;
                 PORTA=0x00;
@@ -86,7 +86,7 @@ int main(void)
                 _delay_ms(2000);
 
 
-            if((PIND & 0x80) == 0x80)
+            if((PIND & 0x40) == 0x40)
                 lsb--;
 
             else
@@ -95,7 +95,7 @@ int main(void)
         }
         while((lsb<=9)&&(lsb>=0));
 
-        if((PIND & 0x80) == 0x80)
+        if((PIND & 0x40) == 0x40)
         {
           if(msb<=0)
             msb=5;
