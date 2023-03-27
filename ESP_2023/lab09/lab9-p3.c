@@ -32,6 +32,9 @@ int main(void)
 
         key = getche(); /* Will not function if compiled on UNIX based system */
 
+		if(key == 0x08) /* Prevents Backspace from being input into array */
+			ctr = ctr-1;
+		
         og[ctr] = key;
         
         
@@ -39,35 +42,44 @@ int main(void)
         {
             alphanum++;
 
-            switch(key)
+            if((key>='A')&&(key<='Z'))
             {
-                case(key>='A')&&(key<='Z'):
-                    mod[chk] = og[ctr] + 0x20;
-                    chk++
-                    break;
-                case(key>='a')&&(key<='z'):
-                    mod[chk] = og[ctr] - 0x20;
-                    chk++
-                    break;
-                case(key>='0')&&(key<='9'):
-                    mod[chk] = og[ctr];
-                    chk++
-                    break;
+                mod[chk] = og[ctr] + 0x20;
+                chk++;
             }
+            else if((key>='a')&&(key<='z'))
+            {
+                mod[chk] = og[ctr] - 0x20;
+                chk++;
+            }
+            else if((key>='0')&&(key<='9'))
+            {
+                mod[chk] = og[ctr];
+                chk++;
+            }
+            
+        
         }
         else
         {
-            switch(key)
+            if((key=='!')||(key=='?')||(key==',')||(key=='.'))
             {
-                case((key=='!')||(key=='?')||(key==',')||(key=='.')):
-                    mod[chk] = og[ctr];
-                    chk++;
-                    break;
-
-                default:
-                    nonal++;
-                    break;
+                mod[chk] = og[ctr];
+                chk++;
+			}
+			else if(key==0x20)
+            {
+                mod[chk] = og[ctr];
+                chk++;
             }
+			else if((key == 0x08)||(key == 0x0D))
+			{
+				chk=chk;
+				nonal=nonal;
+			}
+            else
+                nonal++;
+
         }
 
 		if(key==0x0D)
@@ -82,7 +94,7 @@ int main(void)
     printf("\n\nModified message >> %s",mod);
 
     printf("\n\nTotal alphanumeric characters = %d",alphanum);
-    printf("\nTotal non-alpha striped= %d",nonal);
+    printf("\nTotal non-alpha striped = %d",nonal);
 
     return 0;
 }
