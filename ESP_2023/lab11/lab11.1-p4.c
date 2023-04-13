@@ -45,7 +45,7 @@ int main(void)
         {
             for(lsd=0; lsd<16; lsd++)
             {
-                for(clk=0; clk<25; clk++)
+                for(clk=0; clk<100; clk++)
                 {
                     PORTA = 0x10;
                     PORTC = dis[msd];
