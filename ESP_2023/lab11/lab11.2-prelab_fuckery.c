@@ -54,7 +54,7 @@ int main(void)
             else if(clk1 == 4)
                 PORTA = 0x80;
 
-            for(PORTC=0X01; PORTC<=0X80; PORTC = PORTC<<1)
+            for(PORTC=0X01; PORTC<=0X40; PORTC = PORTC<<1)
             {
                 
                 _delay_ms(100);
