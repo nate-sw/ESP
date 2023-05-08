@@ -14,7 +14,6 @@ MOTD: Daisy, Daisy, give me yout answer do
 void startup(void);
 
 void timemux(int[], int);
-void msgmux(int, int, int, int);
 
 int setmode(int, int);
 
@@ -29,21 +28,6 @@ int main(void)
     
     char clk[5];
     char dis[5];
-
-    
-
-    /*
-        The "state" varialbe is used to control what the TMS is doing
-
-        State values:
-        0: Time has not been set, likely at startup.
-        1: Clock is functionning in 24h mode
-        2: Clock is functionning in 12h mode.
-        3: Time set mode, must be set in 24h notation.
-        4: Alarm set mode, must be set in 24h notation.
-        5: Alarm state; The current time is the same as that which the alarm is set to.
-
-    */
 
     DDRA = 0xFF;
     DDRC = 0xFF;
@@ -74,19 +58,13 @@ int main(void)
                 {
                     if(PIND == 0x01) //Set time
                     {
-                        state = 3;
                         time = setmode(hrs, min);
                         hrs = (time/100);
-                        min = (time%100);
-                        clk[0] = hrs/10 +'0';
-                        clk[1] = hrs%10 +'0';
-                        clk[2] = min/10 +'0';
-                        clk[3] = min%10 +'0';
-                        asconv(clk, dis);
+                        min = (time%100) - 1;
+                        break;
                     }
                     else if(PIND == 0x02) // Set alarm
                     {
-                        state = 4;
                         alarm = setmode(hrs, min);
                     }
                     else
@@ -97,8 +75,6 @@ int main(void)
     }
 }
 
-
-
 void startup()
 {
     int i, j, dly;
@@ -107,11 +83,12 @@ void startup()
     int dismsg[5];
 
     char startmsg[] = {"time manager by nate simard-white 2032574"};
+    char starttime[] = {"0000    "};
 
     dly = 10;
 
     asconv(startmsg, conv);
-    for(i=0; i<48; i++)
+    for(i=0; i<startmsg; i++)
     {
         for(j=0; j<5; j++)
         {
@@ -129,7 +106,28 @@ void startup()
         if(conv[i] + conv[i+2] == 0x00)
             break;
     }
+    do
+    {
+        asconv(starttime, conv);
+        for(i=0; i<starttime; i++)
+        {
+            for(j=0; j<5; j++)
+            {
+                dismsg[0] = conv[i];
+                dismsg[1] = conv[i+1];
+                dismsg[2] = conv[i+2];
+                dismsg[3] = conv[i+3];
 
+                if(conv[i] + conv[i+2] == 0x00)
+                    break;
+
+                timemux(dismsg, dly);
+
+            }
+        if(conv[i] + conv[i+2] == 0x00)
+            break;
+        }
+    } while (PIND != 0x01);
 }
 
 
@@ -164,7 +162,7 @@ void timemux(int dist[], int dly)
 
 int setmode(int hrs, int min)
 {
-    int i, dly, time;
+    int i, dly, time, alrm, setstate;
 
     char settime[] = {"set time"};
     char timeset[] = {"time set"};
@@ -175,115 +173,88 @@ int setmode(int hrs, int min)
     char clk[5];
     int dis[5];
 
+    dly = 100;
+
     DDRD = 0x00;
 
-
-    if(PIND == 0X01) // time set
+    if(PIND == 0x01)
     {
-        dly = 100;
+        setstate = 1;
+        asconv(settime, dismsg);
+    }
+    else if(PIND == 0x02)
+    {
+        setstate = 2;
+        asconv(setalrm, dismsg);
+    }
+
+    for(i=0; i<9; i = i+4)
+    {
+        dis[0] = dismsg[i];
+        dis[1] = dismsg[i+1];
+        dis[2] = dismsg[i+2];
+        dis[3] = dismsg[i+3];
+
+        timemux(dis, dly);
+    }
+    
+    
+    do
+    {
+        if((PIND & 0xF0) == 0x1) //Hours + 10
+            hrs = hrs + 10;
+        else if((PIND & 0xF0) == 0x2) // Hours + 1 
+            hrs = hrs + 1;
+        else if((PIND & 0xF0) == 0x4) // Minutes + 10
+            min = min + 10;
+        else if((PIND & 0xF0) == 0x8) // Minutes + 1
+            min = min + 1;
+        else if((PIND & 0xF0) == 0xF) //Reset Time
+        {
+            hrs = 0;
+            min = 0;
+        }
+        else
+        {
+            hrs = hrs;
+            min = min;
+        }
+
+        if(hrs >= 24)
+            hrs = 0;
+        if(min >= 60)
+            min = 0;
+
+        clk[0] = hrs/10 +'0';
+        clk[1] = hrs%10 +'0';
+        clk[2] = min/10 +'0';
+        clk[3] = min%10 +'0';
+
+
+        asconv(clk, dis);
+        timemux(dis, dly);
+
+    } while((PIND & 0x01) == 0X01) || ((PIND & 0x02) == 0X02);
+
+    if(setstate = 1)
         asconv(settime, dismsg);
 
-        for(i=0; i<9; i = i+4)
-        {
-            dis[0] = dismsg[i];
-            dis[1] = dismsg[i+1];
-            dis[2] = dismsg[i+2];
-            dis[3] = dismsg[i+3];
-
-            timemux(dis, dly);
-        }
-        
-        
-        do
-        {
-            dly = 100;
-            if(PIND == 0x11) //Hours + 10
-                hrs = hrs + 10;
-            else if(PIND == 0x21) // Hours + 1 
-                hrs = hrs + 1;
-            else if(PIND == 0x41) // Minutes + 10
-                min = min + 10;
-            else if(PIND == 0x81) // Minutes + 1
-                min = min + 1;
-            else if(PIND == 0xF1) //Reset Time
-            {
-                hrs = 0;
-                min = 0;
-            }
-            else
-            {
-                hrs = hrs;
-                min = min;
-            }
-
-            if(hrs >= 24)
-                hrs = 0;
-            if(min >= 60)
-                min = 0;
-
-            clk[0] = hrs/10 +'0';
-            clk[1] = hrs%10 +'0';
-            clk[2] = min/10 +'0';
-            clk[3] = min%10 +'0';
-
-        
-            asconv(clk, dis);
-            timemux(dis, dly);
-
-        } while((PIND & 0x01) == 0X01);
-        dly = 100;
-
-        asconv(timeset, dismsg);
-
-        for(i=0; i<9; i = i+4)
-        {
-            dis[0] = dismsg[i];
-            dis[1] = dismsg[i+1];
-            dis[2] = dismsg[i+2];
-            dis[3] = dismsg[i+3];
-
-            timemux(dis, dly);
-        }
-        
-        time = (hrs * 100) + min;
-
-        return time;
-    }
-
-    /*else if(sta == 4) //alarm set
-    {
+    else if(setstate = 2)
         asconv(setalrm, dismsg);
 
-        for(i=0; i<8; i = i+4)
-            msgmux(dismsg[i], dismsg[i+1], dismsg[i+2], dismsg[i+3]);
-        
-        do
-        {
-            timemux(time);
+    for(i=0; i<9; i = i+4)
+    {
+        dis[0] = dismsg[i];
+        dis[1] = dismsg[i+1];
+        dis[2] = dismsg[i+2];
+        dis[3] = dismsg[i+3];
 
-            if(swt == 1)
-                alrm = alrm+1000;
-            else if(swt == 2)
-                alrm = alrm+100;
-            else if(swt == 3)
-                alrm = alrm+10;
-            else if(swt == 4)
-                alrm = alrm+1;
-            else
-                alrm = alrm;
-
-        } while(sta == 3);
-
-        asconv(alrmset, dismsg);
-
-        for(i=0; i<8; i = i+4)
-            msgmux(dismsg[i], dismsg[i+1], dismsg[i+2], dismsg[i+3]);
-
-        return alrm;
+        timemux(dis, dly);
     }
-*/
+    
+    time = (hrs * 100) + min;
 
-
+    return time;
 }
 
 
@@ -294,9 +265,9 @@ void asconv(char msg2conv[], int convmsg[])
 
     char ascii[39] = {"abcdefghijklmnopqrstuvwxyz0123456789- "}; //Adjusted for aditional characters
     int ledpat[39] = {0x77, 0x7C, 0x39, 0x5E, 0x79, 0x71, 0x6F, 0x74, 0x30, 0x1E, 0x70, 0x38, 0x15, \
-    0x54, 0x5C, 0x73, 0x67, 0x50, 0x6D, 0x78, 0x3E, 0x1C, 0x2A, 0x46, 0x6E, 0x52, 0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x67, 0x40, 0x00}; //Adjusted for aditional characters
+    0x54, 0x5C, 0x73, 0x67, 0x50, 0x6D, 0x78, 0x3E, 0x1C, 0x2A, 0x46, 0x6E, 0x52, 0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x67, 0x40, 0x20}; //Adjusted for aditional characters
 
-    for(i=0; i<48; i++)
+    for(i=0; i<msg2conv; i++)
     {
         for(j=0; j<39; j++)
         {
@@ -304,7 +275,7 @@ void asconv(char msg2conv[], int convmsg[])
                 convmsg[i] = ledpat[j];
         }
         
-        if(msg2conv[i] + msg2conv[i+1] == 0x00)
+        if(msg2conv[i] + msg2conv[i+2] == 0x00)
             break;
     }
 }
