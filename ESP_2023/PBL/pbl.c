@@ -19,19 +19,25 @@ int setmode(int, int);
 
 void asconv(char[], int[]);
 
-
+int twlvhrs(int);
 
 int main(void)
 {
-    int hrs, min, sec, state, dly;
-    int time, alarm;
+    int hrs, min, sec, dly, stcng;
+    int systime, distime, alarm;
     
     char clk[5];
-    char dis[5];
+    char alrmmsg[5] = "alrm";
+    int dis[5];
 
     DDRA = 0xFF;
     DDRC = 0xFF;
     DDRD = 0x00;
+
+    alarm = 0;
+    stcng = 0;
+    systime = 0;
+    distime = 0;
 
 
     startup();
@@ -44,31 +50,101 @@ int main(void)
         {
             for(min = 0; min < 60; min++)
             {
-                time =(hrs * 100) + min;
+                systime = (hrs * 100) + min;
 
-                clk[0] = hrs/10 +'0';
-                clk[1] = hrs%10 +'0';
-                clk[2] = min/10 +'0';
-                clk[3] = min%10 +'0';
+                if((PIND & 0x04) == 0x04)
+                {
+                    distime = twlvhrs(systime);
+                    clk[0] = distime/10 +'0';
+                    clk[1] = distime%10 +'0';
+                }
+                else
+                {
+                    clk[0] = systime/1000 +'0';
+                    clk[1] = systime%1000/100 +'0';
+                }
 
+                clk[2] = systime%1000%100/10 +'0';
+                clk[3] = systime%1000%100%10 +'0';
 
                 asconv(clk, dis);
 
+                if((PIND & 0x04) == 0x04)
+                {
+                    if(hrs/12 == 1)
+                    {
+                        dis[0] = dis[0]+0x80;
+                        dis[1] = dis[1]+0x80;
+                    }
+                    dis[3] = dis[3]+0x80;
+                }
+
                 for(sec=0; sec<60; sec++)
                 {
-                    if(PIND == 0x01) //Set time
+                    if((PIND & 0x01) == 0x01) //Set time
                     {
-                        time = setmode(hrs, min);
-                        hrs = (time/100);
-                        min = (time%100) - 1;
+                        systime = setmode(hrs, min);
+                        hrs = (systime/100);
+                        min = (systime%100)-1;
                         break;
                     }
-                    else if(PIND == 0x02) // Set alarm
+                    else if((PIND & 0x02) == 0x02) // Set alarm
                     {
                         alarm = setmode(hrs, min);
+                        min--;
+                        break;
+                    }
+
+
+                   /* if((PIND & 0x04) == 0x04)
+                    {
+                        if(stcng == 0)
+                        {
+                            distime = twlvhrs(systime);
+                
+                            clk[0] = distime/10 +'0';
+                            clk[1] = distime%10 +'0';
+
+                            asconv(clk, dis);
+                            if(hrs/12 == 1)
+                            {
+                                dis[0] = dis[0]+0x80;
+                                dis[1] = dis[1]+0x80;
+                            }
+                            dis[3] = dis[3]+0x80;
+
+                            stcng = 1;
+                        }
+                        
                     }
                     else
-                        timemux(dis, dly);
+                    {
+                        if(stcng == 1)
+                        {
+
+                            clk[0] = systime/1000 +'0';
+                            clk[1] = systime%1000/100 +'0';
+
+
+                            asconv(clk, dis);
+
+                            stcng = 0;
+                        }
+                    }*/
+                    
+                    if((alarm == systime) && (sec < 3)) //Alarm mode
+                    {
+                        do
+                        {
+                            asconv(alrmmsg, dis);
+                            timemux(dis, dly);
+                        }while((alarm == systime) && (sec < 3));
+                    }
+
+                        
+                    timemux(dis, dly);
+                    PIND = 0x00;
+
                 }
             }
         }
@@ -82,13 +158,13 @@ void startup()
     int conv[48];
     int dismsg[5];
 
-    char startmsg[] = {"time manager by nate simard-white 2032574"};
-    char starttime[] = {"0000    "};
+    char startmsg[] = {"time system by nate simard-white 2032574"};
+    char starttime[] = {"0000"};
 
     dly = 10;
 
     asconv(startmsg, conv);
-    for(i=0; i<startmsg; i++)
+    for(i=0; i<42; i++)
     {
         for(j=0; j<5; j++)
         {
@@ -106,30 +182,20 @@ void startup()
         if(conv[i] + conv[i+2] == 0x00)
             break;
     }
+
+        asconv(starttime, conv);
+        dismsg[0] = conv[0];
+        dismsg[1] = conv[1];
+        dismsg[2] = conv[2];
+        dismsg[3] = conv[3];
+
+        dly = 50;
     do
     {
-        asconv(starttime, conv);
-        for(i=0; i<starttime; i++)
-        {
-            for(j=0; j<5; j++)
-            {
-                dismsg[0] = conv[i];
-                dismsg[1] = conv[i+1];
-                dismsg[2] = conv[i+2];
-                dismsg[3] = conv[i+3];
-
-                if(conv[i] + conv[i+2] == 0x00)
-                    break;
-
-                timemux(dismsg, dly);
-
-            }
-        if(conv[i] + conv[i+2] == 0x00)
-            break;
-        }
+        timemux(dismsg, dly);
+        _delay_ms(500);
     } while (PIND != 0x01);
 }
-
 
 void timemux(int dist[], int dly)
 {
@@ -138,6 +204,7 @@ void timemux(int dist[], int dly)
     
     DDRA = 0xFF;
     DDRC = 0xFF;
+    DDRD = 0x00;
 
     for(i=0; i<dly; i++)
     {
@@ -159,41 +226,40 @@ void timemux(int dist[], int dly)
     }
 }
 
-
 int setmode(int hrs, int min)
 {
-    int i, dly, time, alrm, setstate;
+    int i, dly, time;
 
     char settime[] = {"set time"};
-    char timeset[] = {"time set"};
     char setalrm[] = {"set alrm"};
-    char alrmset[] = {"arlm set"};
-    int dismsg[9];
 
     char clk[5];
+
+    int msg[9];
     int dis[5];
+    
+    i = 0;
 
     dly = 100;
 
+    DDRA = 0xFF;
+    DDRC = 0xFF;
     DDRD = 0x00;
 
     if(PIND == 0x01)
-    {
-        setstate = 1;
-        asconv(settime, dismsg);
-    }
-    else if(PIND == 0x02)
-    {
-        setstate = 2;
-        asconv(setalrm, dismsg);
-    }
+        asconv(settime, msg);
+    
 
-    for(i=0; i<9; i = i+4)
+    else if(PIND == 0x02)
+        asconv(setalrm, msg);
+    
+
+    for(i=0; i<8; i = i+4)
     {
-        dis[0] = dismsg[i];
-        dis[1] = dismsg[i+1];
-        dis[2] = dismsg[i+2];
-        dis[3] = dismsg[i+3];
+        dis[0] = msg[i];
+        dis[1] = msg[i+1];
+        dis[2] = msg[i+2];
+        dis[3] = msg[i+3];
 
         timemux(dis, dly);
     }
@@ -201,15 +267,15 @@ int setmode(int hrs, int min)
     
     do
     {
-        if((PIND & 0xF0) == 0x1) //Hours + 10
+        if(PIND == 0x11 || PIND == 0x12)  //Hours + 10
             hrs = hrs + 10;
-        else if((PIND & 0xF0) == 0x2) // Hours + 1 
+        else if(PIND == 0x21 || PIND == 0x22)  // Hours + 1 
             hrs = hrs + 1;
-        else if((PIND & 0xF0) == 0x4) // Minutes + 10
+        else if(PIND == 0x41 || PIND == 0x42)  // Minutes + 10
             min = min + 10;
-        else if((PIND & 0xF0) == 0x8) // Minutes + 1
+        else if(PIND == 0x81 || PIND == 0x82)   // Minutes + 1
             min = min + 1;
-        else if((PIND & 0xF0) == 0xF) //Reset Time
+        else if(PIND == 0xF1 || PIND == 0xF2)  //Reset Time
         {
             hrs = 0;
             min = 0;
@@ -234,40 +300,37 @@ int setmode(int hrs, int min)
         asconv(clk, dis);
         timemux(dis, dly);
 
-    } while((PIND & 0x01) == 0X01) || ((PIND & 0x02) == 0X02);
+    } while((PIND & 0x01) == 0X01 || (PIND & 0x02) == 0X02);
 
-    if(setstate = 1)
-        asconv(settime, dismsg);
-
-    else if(setstate = 2)
-        asconv(setalrm, dismsg);
-
-    for(i=0; i<9; i = i+4)
+    for(i=8; i>=0; i = i-4)
     {
-        dis[0] = dismsg[i];
-        dis[1] = dismsg[i+1];
-        dis[2] = dismsg[i+2];
-        dis[3] = dismsg[i+3];
+        dis[0] = msg[i];
+        dis[1] = msg[i+1];
+        dis[2] = msg[i+2];
+        dis[3] = msg[i+3];
 
         timemux(dis, dly);
     }
+    i = 0;
     
     time = (hrs * 100) + min;
 
+
     return time;
 }
-
-
 
 void asconv(char msg2conv[], int convmsg[])
 {
     int i, j;
 
-    char ascii[39] = {"abcdefghijklmnopqrstuvwxyz0123456789- "}; //Adjusted for aditional characters
-    int ledpat[39] = {0x77, 0x7C, 0x39, 0x5E, 0x79, 0x71, 0x6F, 0x74, 0x30, 0x1E, 0x70, 0x38, 0x15, \
-    0x54, 0x5C, 0x73, 0x67, 0x50, 0x6D, 0x78, 0x3E, 0x1C, 0x2A, 0x46, 0x6E, 0x52, 0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x67, 0x40, 0x20}; //Adjusted for aditional characters
+    i = 0;
+    j = 0;
 
-    for(i=0; i<msg2conv; i++)
+    char ascii[39] = {"-abcdefghijklmnopqrstuvwxyz0123456789 "}; //Adjusted for aditional characters
+    int ledpat[39] = {0x40, 0x77, 0x7C, 0x39, 0x5E, 0x79, 0x71, 0x6F, 0x74, 0x30, 0x1E, 0x70, 0x38, 0x15, \
+    0x54, 0x5C, 0x73, 0x67, 0x50, 0x6D, 0x78, 0x3E, 0x1C, 0x2A, 0x46, 0x6E, 0x52, 0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x67,  0x00}; //Adjusted for aditional characters
+
+    for(i=0; i<48; i++)
     {
         for(j=0; j<39; j++)
         {
@@ -275,7 +338,24 @@ void asconv(char msg2conv[], int convmsg[])
                 convmsg[i] = ledpat[j];
         }
         
-        if(msg2conv[i] + msg2conv[i+2] == 0x00)
+        if(msg2conv[i] + msg2conv[i+1] == 0x00)
             break;
     }
+}
+
+int twlvhrs(int systime)
+{
+    int distime, hrs;
+    hrs = systime/100;
+
+    if(hrs == 0)//12AM
+        distime = 12;
+    
+    else if(hrs >= 12)//1PM-11PM
+        distime = hrs%12;
+    
+    else//1AM-12PM
+        distime = hrs;
+
+    return distime;
 }
